@@ -1,23 +1,79 @@
-import { Check, X } from "lucide-react";
+"use client";
+
+import { Check, X, Minus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 
 interface ActivityMonitorProps {
   activeWindows: string[];
 }
 
-export function ActivityMonitor({ activeWindows }: ActivityMonitorProps) {
-  // Define productive applications
-  const productiveApps = [
-    "Microsoft Word",
-    "Google Chrome - Canvas LMS",
-    "Visual Studio Code",
-    "Notion",
-    "Google Docs",
-    "PDF Reader",
-    "Slack",
-  ];
+interface AppClassification {
+  app: string;
+  category: "PRODUCTIVE" | "DISTRACTING" | "NEUTRAL";
+}
 
-  const isProductive = (window: string) => {
-    return productiveApps.some((app) => window.includes(app));
+export function ActivityMonitor({ activeWindows }: ActivityMonitorProps) {
+  const [classifications, setClassifications] = useState<
+    Record<string, string>
+  >({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // Only fetch classifications if there are active windows
+    if (activeWindows.length === 0) return;
+
+    const fetchClassifications = async () => {
+      setIsLoading(true);
+      try {
+        // Use the cached classification endpoint for better performance
+        const response = await api.post("/classify-apps/cached", {
+          appNames: activeWindows,
+        });
+
+        const appClassifications = response.data
+          .classifications as AppClassification[];
+
+        // Convert array to record for easier lookup
+        const classificationMap: Record<string, string> = {};
+        appClassifications.forEach((item) => {
+          classificationMap[item.app] = item.category;
+        });
+
+        setClassifications(classificationMap);
+      } catch (error) {
+        console.error("Failed to classify applications:", error);
+        // Fallback to empty classifications
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchClassifications();
+  }, [activeWindows]);
+
+  const getIcon = (window: string) => {
+    const category = classifications[window];
+
+    if (category === "PRODUCTIVE") {
+      return <Check className="h-5 w-5 text-green-500" />;
+    } else if (category === "DISTRACTING") {
+      return <X className="h-5 w-5 text-red-500" />;
+    } else {
+      return <Minus className="h-5 w-5 text-gray-400" />;
+    }
+  };
+
+  const getTextColor = (window: string) => {
+    const category = classifications[window];
+
+    if (category === "PRODUCTIVE") {
+      return "text-green-500";
+    } else if (category === "DISTRACTING") {
+      return "text-red-500";
+    } else {
+      return "text-gray-400";
+    }
   };
 
   return (
@@ -26,6 +82,10 @@ export function ActivityMonitor({ activeWindows }: ActivityMonitorProps) {
         <div className="text-center py-4 text-muted-foreground">
           No active windows detected
         </div>
+      ) : isLoading ? (
+        <div className="text-center py-4 text-muted-foreground">
+          Analyzing applications...
+        </div>
       ) : (
         activeWindows.map((window, index) => (
           <div
@@ -33,17 +93,7 @@ export function ActivityMonitor({ activeWindows }: ActivityMonitorProps) {
             className="flex items-center justify-between p-2 rounded-md border"
           >
             <span className="font-medium truncate max-w-[200px]">{window}</span>
-            <span
-              className={
-                isProductive(window) ? "text-green-500" : "text-red-500"
-              }
-            >
-              {isProductive(window) ? (
-                <Check className="h-5 w-5" />
-              ) : (
-                <X className="h-5 w-5" />
-              )}
-            </span>
+            <span className={getTextColor(window)}>{getIcon(window)}</span>
           </div>
         ))
       )}

@@ -167,7 +167,7 @@ export default function SessionSummaryPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[400px]">
+                <div className="h-[300px]">
                   <ChartContainer
                     config={{
                       productivity: {
@@ -175,7 +175,6 @@ export default function SessionSummaryPage() {
                         color: "hsl(var(--chart-1))",
                       },
                     }}
-                    className="h-[400px]"
                   >
                     <BarChart
                       data={activityData}

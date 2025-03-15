@@ -60,12 +60,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 Groups
               </Link>
             </Button>
-            <Button variant="ghost" className="justify-start gap-2" asChild>
-              <Link href="/leaderboard">
-                <Trophy className="h-5 w-5" />
-                Leaderboard
-              </Link>
-            </Button>
           </nav>
         </aside>
         <main className="flex-1 p-4 md:p-6">{children}</main>

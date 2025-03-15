@@ -20,19 +20,35 @@ import { JoinGroupDialog } from "@/components/join-group-dialog";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 
+interface DashboardData {
+  userId: string;
+  displayName: string;
+  totalSessions: number;
+  totalTime: string;
+  totalTimeSeconds: number;
+  productiveTime: string;
+  productiveTimeSeconds: number;
+  distractingTime: string;
+  distractingTimeSeconds: number;
+  averageProductivityScore: number;
+  recentSessions: {
+    sessionId: string;
+    date: string;
+    duration: string;
+    productivityScore: number;
+  }[];
+}
+
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showJoinGroup, setShowJoinGroup] = useState(false);
-  const [recentSessions, setRecentSessions] = useState<any[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
-  const [stats, setStats] = useState({
-    productivityScore: 0,
-    studyTime: 0,
-    quizScore: 0,
-  });
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null
+  );
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -46,7 +62,11 @@ export default function DashboardPage() {
 
       setIsLoadingData(true);
       try {
-        // Fetch all groups using the new endpoint
+        // Fetch dashboard data
+        const dashboardResponse = await api.get(`/dashboard/${user.uid}`);
+        setDashboardData(dashboardResponse.data);
+
+        // Fetch all groups using the groups endpoint
         const groupsResponse = await api.get("/groups");
         const allGroups = groupsResponse.data.groups || [];
 
@@ -64,14 +84,6 @@ export default function DashboardPage() {
           }));
 
         setGroups(userGroups);
-
-        setRecentSessions([]);
-
-        setStats({
-          productivityScore: 0,
-          studyTime: 0,
-          quizScore: 0,
-        });
       } catch (error) {
         console.error("Failed to fetch user data:", error);
         toast.error("Failed to load your data");
@@ -97,6 +109,13 @@ export default function DashboardPage() {
     );
   }
 
+  // Calculate study time in hours for the progress bar
+  const studyTimeHours = dashboardData
+    ? Math.round(dashboardData.totalTimeSeconds / 3600)
+    : 0;
+  const studyTimeProgress =
+    studyTimeHours > 0 ? Math.min(100, (studyTimeHours / 20) * 100) : 0;
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
@@ -104,7 +123,8 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
             <p className="text-muted-foreground">
-              Welcome back, {user.displayName || "User"}!
+              Welcome back,{" "}
+              {dashboardData?.displayName || user.displayName || "User"}!
             </p>
           </div>
           <Button onClick={startSession} className="w-full md:w-auto">
@@ -122,12 +142,15 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {stats.productivityScore}%
+                {dashboardData?.averageProductivityScore || 0}%
               </div>
               <p className="text-xs text-muted-foreground">
                 Average from sessions
               </p>
-              <Progress value={stats.productivityScore} className="mt-3" />
+              <Progress
+                value={dashboardData?.averageProductivityScore || 0}
+                className="mt-3"
+              />
             </CardContent>
           </Card>
           <Card>
@@ -136,23 +159,50 @@ export default function DashboardPage() {
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.studyTime}h</div>
+              <div className="text-2xl font-bold">
+                {dashboardData?.totalTime || "0h"}
+              </div>
               <p className="text-xs text-muted-foreground">Total study time</p>
-              <Progress
-                value={stats.studyTime > 0 ? (stats.studyTime / 20) * 100 : 0}
-                className="mt-3"
-              />
+              <Progress value={studyTimeProgress} className="mt-3" />
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Quiz Score</CardTitle>
+              <CardTitle className="text-sm font-medium">Focus Ratio</CardTitle>
               <Trophy className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.quizScore}%</div>
-              <p className="text-xs text-muted-foreground">Last quiz</p>
-              <Progress value={stats.quizScore} className="mt-3" />
+              {dashboardData ? (
+                <>
+                  <div className="text-2xl font-bold">
+                    {Math.round(
+                      (dashboardData.productiveTimeSeconds /
+                        Math.max(1, dashboardData.totalTimeSeconds)) *
+                        100
+                    )}
+                    %
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Productive vs. total time
+                  </p>
+                  <Progress
+                    value={
+                      (dashboardData.productiveTimeSeconds /
+                        Math.max(1, dashboardData.totalTimeSeconds)) *
+                      100
+                    }
+                    className="mt-3"
+                  />
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">0%</div>
+                  <p className="text-xs text-muted-foreground">
+                    Productive vs. total time
+                  </p>
+                  <Progress value={0} className="mt-3" />
+                </>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -204,11 +254,12 @@ export default function DashboardPage() {
                   <div className="py-8 text-center text-muted-foreground">
                     Loading sessions...
                   </div>
-                ) : recentSessions.length > 0 ? (
+                ) : dashboardData?.recentSessions &&
+                  dashboardData.recentSessions.length > 0 ? (
                   <div className="space-y-4">
-                    {recentSessions.map((session) => (
+                    {dashboardData.recentSessions.map((session) => (
                       <div
-                        key={session.id}
+                        key={session.sessionId}
                         className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
                       >
                         <div>
@@ -220,13 +271,17 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-4">
                           <div className="text-sm">
                             Score:{" "}
-                            <span className="font-bold">{session.score}%</span>
+                            <span className="font-bold">
+                              {session.productivityScore}%
+                            </span>
                           </div>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() =>
-                              router.push(`/session/${session.id}`)
+                              router.push(
+                                `/session/${session.sessionId}/summary`
+                              )
                             }
                           >
                             Details

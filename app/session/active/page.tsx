@@ -92,26 +92,19 @@ export default function ActiveSessionPage() {
 
         setActiveWindows(activities.length > 0 ? activities : []);
 
-        // TEST
-        const productiveApps = [
-          "Microsoft Word",
-          "Google Chrome",
-          "Visual Studio Code",
-          "Notion",
-        ];
-        const productiveCount = activities.filter((app: string) =>
-          productiveApps.some((prodApp) => app.includes(prodApp))
-        ).length;
-
+        // If we have activities, get the session details to get the productivity score
         if (activities.length > 0) {
-          const newScore = Math.round(
-            (productiveCount / activities.length) * 100
-          );
-          setProductivityScore((prev) => {
-            return prev === 0
-              ? newScore
-              : Math.round(prev * 0.7 + newScore * 0.3);
-          });
+          try {
+            const detailsResponse = await api.get(
+              `/session/${sessionId}/details`
+            );
+            if (detailsResponse.data.productivityScore) {
+              // Convert from 0-10 scale to 0-100 scale for display
+              setProductivityScore(detailsResponse.data.productivityScore * 10);
+            }
+          } catch (error) {
+            console.error("Failed to fetch session details:", error);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch activity:", error);
@@ -155,10 +148,14 @@ export default function ActiveSessionPage() {
         `Session completed! Your productivity score: ${productivityScore}`
       );
 
-      // Clear the current session
+      // Store the session ID for the summary page
+      const currentSessionId = sessionId;
+
+      // Clear the current session from localStorage
       localStorage.removeItem("current_session_id");
 
-      router.push("/session/summary");
+      // Redirect to the dynamic session summary page with the session ID
+      router.push(`/session/${currentSessionId}/summary`);
     } catch (error: any) {
       console.error("Error ending session:", error);
       const errorMessage =
@@ -232,7 +229,7 @@ export default function ActiveSessionPage() {
             <CardContent>
               <div className="flex flex-col items-center">
                 <div className="text-5xl font-bold mb-4">
-                  {productivityScore}%
+                  {Math.round(productivityScore)}%
                 </div>
                 <Progress value={productivityScore} className="w-full" />
               </div>
