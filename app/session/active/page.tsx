@@ -173,7 +173,7 @@ export default function ActiveSessionPage() {
         </div>
       </header>
 
-      <main className="flex-1 container max-w-6xl py-6 space-y-6">
+      <main className="flex-1 container max-w-6xl py-6 space-y-6 mx-auto">
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="md:col-span-2">
             <CardHeader className="pb-4">

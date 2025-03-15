@@ -40,7 +40,7 @@ export default function Home() {
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
-                  <Link href="/about">
+                  <Link href="/">
                     <Button size="lg" variant="outline">
                       Learn More
                     </Button>
