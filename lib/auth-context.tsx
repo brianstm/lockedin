@@ -1,8 +1,10 @@
 "use client";
 
-import React from "react";
+import type React from "react";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { toast } from "sonner";
+import api from "./axios-config";
 
 interface User {
   uid: string;
@@ -17,8 +19,8 @@ interface AuthContextType {
     username: string,
     email: string,
     password: string
-  ) => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
+  ) => Promise<User>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
 }
 
@@ -32,12 +34,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check if user is logged in
     const checkAuth = async () => {
       try {
-        // Only run on client-side
-        if (typeof window !== 'undefined') {
-          const storedUser = localStorage.getItem("lockedin_user");
-          if (storedUser) {
-            setUser(JSON.parse(storedUser));
-          }
+        const storedUser = localStorage.getItem("lockedin_user");
+        const token = localStorage.getItem("lockedin_token");
+
+        if (storedUser && token) {
+          setUser(JSON.parse(storedUser));
         }
       } catch (error) {
         console.error("Auth check failed:", error);
@@ -55,72 +56,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string
   ) => {
     try {
-      // In a real implementation, this would call your API
-      const response = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password }),
+      const response = await api.post("/register", {
+        username,
+        email,
+        password,
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Registration failed");
-      }
+      const userId = response.data.userId;
 
-      // For demo purposes, we'll create a mock user
-      const mockUser = {
-        uid: `user_${username}_${Date.now()}`,
+      // Create user object
+      const newUser = {
+        uid: userId,
         email: email,
         displayName: username,
       };
 
-      setUser(mockUser);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem("lockedin_user", JSON.stringify(mockUser));
-      }
-    } catch (error) {
+      setUser(newUser);
+      localStorage.setItem("lockedin_user", JSON.stringify(newUser));
+
+      return newUser;
+    } catch (error: any) {
       console.error("Registration error:", error);
-      throw error;
+      const errorMessage = error.response?.data?.error || "Registration failed";
+      toast.error(errorMessage);
+      throw new Error(errorMessage);
     }
   };
 
   const login = async (email: string, password: string) => {
     try {
-      // In a real implementation, this would call your API
-      const response = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      const response = await api.post("/login", {
+        email,
+        password,
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Login failed");
-      }
+      const { token, userId } = response.data;
 
-      // For demo purposes, we'll create a mock user
-      const mockUser = {
-        uid: `user_${email}_${Date.now()}`,
-        email: email,
-        displayName: email.split("@")[0],
-      };
+      // Store token
+      localStorage.setItem("lockedin_token", token);
 
-      setUser(mockUser);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem("lockedin_user", JSON.stringify(mockUser));
+      // Get user info from Firebase
+      try {
+        // In a real app, you might want to get more user details here
+        // For now, we'll create a basic user object
+        const newUser = {
+          uid: userId,
+          email: email,
+          displayName: email.split("@")[0], // Simple display name from email
+        };
+
+        setUser(newUser);
+        localStorage.setItem("lockedin_user", JSON.stringify(newUser));
+
+        return newUser;
+      } catch (userError) {
+        console.error("Error getting user details:", userError);
+        throw userError;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      throw error;
+      const errorMessage = error.response?.data?.error || "Login failed";
+      toast.error(errorMessage);
+      throw new Error(errorMessage);
     }
   };
 
   const logout = async () => {
     try {
-      // In a real implementation, this would call your API
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem("lockedin_user");
-      }
+      // No need to call API for logout as Firebase handles tokens client-side
+      localStorage.removeItem("lockedin_token");
+      localStorage.removeItem("lockedin_user");
       setUser(null);
     } catch (error) {
       console.error("Logout error:", error);
