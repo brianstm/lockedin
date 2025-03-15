@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import api from "@/lib/axios-config";
+import { api } from "@/lib/api";
 
 export default function NewSessionPage() {
   const { user } = useAuth();
@@ -44,37 +44,23 @@ export default function NewSessionPage() {
         // Add individual session option
         const groupsData = [{ id: "individual", name: "Individual Session" }];
 
-        // Try to fetch CS group
-        try {
-          const csGroupResponse = await api.get(
-            "/groups/CS 101 Study Group/members"
-          );
-          if (csGroupResponse.data) {
-            groupsData.push({
-              id: "cs101", // Using a placeholder ID
-              name: "CS 101 Study Group",
-            });
-          }
-        } catch (error) {
-          console.log("CS group not found or user not a member");
-        }
+        // Fetch all groups
+        const response = await api.get("/groups");
+        const allGroups = response.data.groups || [];
 
-        // Try to fetch Math group
-        try {
-          const mathGroupResponse = await api.get(
-            "/groups/Math Finals Prep/members"
-          );
-          if (mathGroupResponse.data) {
-            groupsData.push({
-              id: "math", // Using a placeholder ID
-              name: "Math Finals Prep",
-            });
-          }
-        } catch (error) {
-          console.log("Math group not found or user not a member");
-        }
+        // Filter groups where the user is a member
+        const userGroups = allGroups
+          .filter(
+            (group: any) =>
+              group.members &&
+              group.members.some((member: any) => member.userId === user.uid)
+          )
+          .map((group: any) => ({
+            id: group.groupCode,
+            name: group.groupName,
+          }));
 
-        setGroups(groupsData);
+        setGroups([...groupsData, ...userGroups]);
       } catch (error) {
         console.error("Failed to fetch groups:", error);
         toast.error("Failed to load your groups");

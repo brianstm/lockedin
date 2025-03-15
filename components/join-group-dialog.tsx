@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import api from "@/lib/axios-config";
+import { api } from "@/lib/api";
 
 interface JoinGroupDialogProps {
   open: boolean;
@@ -27,6 +27,17 @@ export function JoinGroupDialog({ open, onOpenChange }: JoinGroupDialogProps) {
   const router = useRouter();
   const [groupCode, setGroupCode] = useState("");
   const [isJoining, setIsJoining] = useState(false);
+
+  // Check if there's a stored group code to join
+  useEffect(() => {
+    if (open) {
+      const storedCode = localStorage.getItem("join_group_code");
+      if (storedCode) {
+        setGroupCode(storedCode);
+        localStorage.removeItem("join_group_code");
+      }
+    }
+  }, [open]);
 
   const joinGroup = async () => {
     if (!groupCode.trim()) {

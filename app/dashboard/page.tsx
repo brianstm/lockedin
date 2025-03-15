@@ -17,8 +17,8 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreateGroupDialog } from "@/components/create-group-dialog";
 import { JoinGroupDialog } from "@/components/join-group-dialog";
-import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 export default function DashboardPage() {
   const { user, isLoading } = useAuth();
@@ -46,50 +46,27 @@ export default function DashboardPage() {
 
       setIsLoadingData(true);
       try {
-        // For now, we'll fetch groups by name since the API doesn't have a user/groups endpoint
-        // In a real implementation, you'd want to store the user's groups and fetch them
-        const groupsData = [];
+        // Fetch all groups using the new endpoint
+        const groupsResponse = await api.get("/groups");
+        const allGroups = groupsResponse.data.groups || [];
 
-        // Fetch groups the user is part of - this is a simplified approach
-        // In a real app, you'd have an endpoint to get all user's groups
-        try {
-          const csGroupResponse = await api.get(
-            "/groups/CS 101 Study Group/members"
-          );
-          if (csGroupResponse.data) {
-            groupsData.push({
-              id: "cs101", // Using a placeholder ID
-              name: "CS 101 Study Group",
-              members: csGroupResponse.data.members?.length || 0,
-            });
-          }
-        } catch (error) {
-          console.log("CS group not found or user not a member");
-        }
+        // Filter groups where the user is a member
+        const userGroups = allGroups
+          .filter(
+            (group: any) =>
+              group.members &&
+              group.members.some((member: any) => member.userId === user.uid)
+          )
+          .map((group: any) => ({
+            id: group.groupCode,
+            name: group.groupName,
+            members: group.members ? group.members.length : 0,
+          }));
 
-        try {
-          const mathGroupResponse = await api.get(
-            "/groups/Math Finals Prep/members"
-          );
-          if (mathGroupResponse.data) {
-            groupsData.push({
-              id: "math", // Using a placeholder ID
-              name: "Math Finals Prep",
-              members: mathGroupResponse.data.members?.length || 0,
-            });
-          }
-        } catch (error) {
-          console.log("Math group not found or user not a member");
-        }
+        setGroups(userGroups);
 
-        setGroups(groupsData);
-
-        // Note: The API doesn't have an endpoint to fetch recent sessions
-        // We'll leave this empty for now
         setRecentSessions([]);
 
-        // Note: The API doesn't have endpoints for these stats
-        // We'll use zeros for now
         setStats({
           productivityScore: 0,
           studyTime: 0,

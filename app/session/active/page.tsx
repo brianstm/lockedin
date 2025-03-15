@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { Clock, AlertCircle } from "lucide-react";
 import { ActivityMonitor } from "@/components/activity-monitor";
-import api from "@/lib/axios-config";
+import { api } from "@/lib/api";
 
 export default function ActiveSessionPage() {
   const { user } = useAuth();
@@ -92,15 +92,14 @@ export default function ActiveSessionPage() {
 
         setActiveWindows(activities.length > 0 ? activities : []);
 
-        // For productivity score, we'll use a simple calculation
-        // In a real implementation, this would come from your API
+        // TEST
         const productiveApps = [
           "Microsoft Word",
           "Google Chrome",
           "Visual Studio Code",
           "Notion",
         ];
-        const productiveCount = activities.filter((app: string | string[]) =>
+        const productiveCount = activities.filter((app: string) =>
           productiveApps.some((prodApp) => app.includes(prodApp))
         ).length;
 
@@ -161,6 +160,7 @@ export default function ActiveSessionPage() {
 
       router.push("/session/summary");
     } catch (error: any) {
+      console.error("Error ending session:", error);
       const errorMessage =
         error.response?.data?.error || "Error ending session";
       toast.error(errorMessage);

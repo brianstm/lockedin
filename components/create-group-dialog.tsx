@@ -15,7 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import api from "@/lib/axios-config";
+// Make sure we're using the api from the lib/api.ts file
+import { api } from "@/lib/api";
 
 interface CreateGroupDialogProps {
   open: boolean;
@@ -71,7 +72,7 @@ export function CreateGroupDialog({
             <Label htmlFor="group-name">Group Name</Label>
             <Input
               id="group-name"
-              placeholder="e.g., CS1010E Study Group"
+              placeholder="e.g., CS 101 Study Group"
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
             />

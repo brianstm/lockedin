@@ -33,12 +33,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <span>LockedIn</span>
         </Link>
         <nav className="ml-auto flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/settings">
-              <Settings className="h-5 w-5" />
-              <span className="sr-only">Settings</span>
-            </Link>
-          </Button>
           <Button variant="ghost" size="icon" onClick={logout}>
             <LogOut className="h-5 w-5" />
             <span className="sr-only">Log out</span>
