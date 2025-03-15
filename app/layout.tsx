@@ -9,8 +9,13 @@ import { AuthProvider } from "@/lib/auth-context";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "LockedIn - Focus & Productivity",
-  description: "Gamify your studying experience and improve productivity",
+  title: "LockedIn",
+  description: "Stay focused and track your productivity",
+  icons: {
+    icon: "/download.svg",
+    shortcut: "/download.svg",
+    apple: "/download.svg",
+  },
 };
 
 export default function RootLayout({

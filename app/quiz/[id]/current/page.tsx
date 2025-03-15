@@ -59,7 +59,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<Record<number, string>>(
-    {},
+    {}
   );
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [feedback, setFeedback] = useState<
@@ -94,60 +94,24 @@ export default function QuizPage({ params }: { params: { id: string } }) {
       setIsLoadingQuiz(true);
       setQuizError(null);
       try {
-        // In a real app, fetch the specific quiz by ID
-        const response = await fetch(`/quiz/${quizId}`);
-        if (!response.ok) {
-          const errorMsg = "Quiz not found";
-          setQuizError(errorMsg);
-          toast.error(errorMsg);
-          return;
-        }
-        const data = await response.json();
+        const response = await api.get(`/quiz/${quizId}`);
+        const data = response.data;
 
         // Transform API data to match your Quiz interface
         const formattedQuiz: Quiz = {
-          id: data.quizId || "temp-quiz",
-          title: `Quiz on ${data.topic || "Unknown Topic"}`,
-          description: `Test your knowledge about ${data.topic || "this topic"}`,
-          timeLimit: data.timeLimit || 600, // 10 minutes in seconds
-          questions: Array.isArray(data.questions)
-            ? data.questions.map(
-                (
-                  q: {
-                    questionText: string;
-                    answers: string;
-                    options?: string[];
-                  },
-                  index: number,
-                ) => {
-                  // Extract question and options
-                  const questionText =
-                    q.questionText || `Question ${index + 1}`;
-
-                  // Handle options
-                  let options = [];
-                  if (Array.isArray(q.options)) {
-                    options = q.options.map((opt, i) => ({
-                      id: String.fromCharCode(97 + i), // a, b, c, d
-                      text: opt,
-                    }));
-                  } else {
-                    // Fallback: Parse from questionText if needed
-                    options = ["a", "b", "c", "d"].map((letter) => ({
-                      id: letter,
-                      text: `Option ${letter.toUpperCase()}`,
-                    }));
-                  }
-
-                  return {
-                    id: index + 1,
-                    text: questionText,
-                    options: options,
-                    correctAnswer: q.answers ? q.answers.toLowerCase() : "a",
-                  };
-                },
-              )
-            : [],
+          id: data.quizId,
+          title: `Quiz on ${data.topic}`,
+          description: `Test your knowledge about ${data.topic}`,
+          timeLimit: 600, // 10 minutes in seconds
+          questions: data.questions.map((q: any, index: number) => ({
+            id: index + 1,
+            text: q.questionText.split("\n")[0], // Get first line as question text
+            options: q.options.map((opt: any) => ({
+              id: opt.letter.toLowerCase(),
+              text: opt.text,
+            })),
+            correctAnswer: q.correctAnswer?.toLowerCase() || "a",
+          })),
         };
         setQuiz(formattedQuiz);
         setTimeRemaining(formattedQuiz.timeLimit);
@@ -159,7 +123,6 @@ export default function QuizPage({ params }: { params: { id: string } }) {
         setIsLoadingQuiz(false);
       }
     } else {
-      // For new quizzes, we don't need to load anything initially
       setIsLoadingQuiz(false);
     }
   }, [user, quizId]);
@@ -176,24 +139,13 @@ export default function QuizPage({ params }: { params: { id: string } }) {
 
     setIsGenerating(true);
     try {
-      const response = await fetch("/quiz/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: user?.uid,
-          sessionId: sessionStorage.getItem("sessionId") || "default-session",
-          topic: topic.trim(),
-        }),
+      const response = await api.post("/quiz/generate", {
+        userId: user?.uid,
+        sessionId: sessionStorage.getItem("sessionId") || "default-session",
+        topic: topic.trim(),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate quiz");
-      }
-
-      const quizData = await response.json();
+      const quizData = response.data;
 
       // Transform the API response to match our Quiz interface
       const formattedQuiz: Quiz = {
@@ -201,34 +153,15 @@ export default function QuizPage({ params }: { params: { id: string } }) {
         title: `Quiz on ${quizData.topic}`,
         description: `Test your knowledge about ${quizData.topic}`,
         timeLimit: 600, // 10 minutes in seconds
-        questions: quizData.questions.map(
-          (q: { questionText: string; answers: string }, index: number) => {
-            // Parse the question text to extract the question and options
-            const questionParts = q.questionText.split(/\n+/);
-            const questionText = questionParts[0]
-              .replace(/^\d+\.\s*/, "")
-              .trim();
-
-            // Extract options assuming format like "A. Option text"
-            const options = ["A", "B", "C", "D"].map((letter) => {
-              const optionRegex = new RegExp(`${letter}\\.\\s*(.+)`, "i");
-              const matchedOption = q.questionText.match(optionRegex);
-              return {
-                id: letter.toLowerCase(),
-                text: matchedOption
-                  ? matchedOption[1].trim()
-                  : `Option ${letter}`,
-              };
-            });
-
-            return {
-              id: index + 1,
-              text: questionText,
-              options: options,
-              correctAnswer: q.answers.toLowerCase(),
-            };
-          },
-        ),
+        questions: quizData.questions.map((q: any, index: number) => ({
+          id: index + 1,
+          text: q.questionText.split("\n")[0], // Get first line as question text
+          options: q.options.map((opt: any) => ({
+            id: opt.letter.toLowerCase(),
+            text: opt.text,
+          })),
+          correctAnswer: q.correctAnswer?.toLowerCase() || "a",
+        })),
       };
 
       setQuiz(formattedQuiz);
@@ -240,7 +173,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
     } catch (error) {
       console.error("Failed to generate quiz:", error);
       toast.error(
-        error instanceof Error ? error.message : "Failed to generate quiz",
+        error instanceof Error ? error.message : "Failed to generate quiz"
       );
     } finally {
       setIsGenerating(false);
@@ -253,35 +186,22 @@ export default function QuizPage({ params }: { params: { id: string } }) {
     setIsSubmitting(true);
 
     try {
-      let correctCount = 0;
-      quiz.questions.forEach((question, index) => {
-        if (answers[index] === question.correctAnswer) {
-          correctCount++;
-        }
-      });
-
-      const score = Math.round((correctCount / quiz.questions.length) * 100);
-
       // Submit to the API
-      await fetch(`/quiz/submit`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          quizId: quiz.id,
-          userId: user?.uid,
-          answers: Object.entries(answers).map(([index, option]) => ({
-            questionIndex: parseInt(index),
-            selectedOption: option,
-          })),
-        }),
+      const response = await api.post("/quiz/submit", {
+        quizId: quiz.id,
+        userId: user?.uid,
+        answers: Object.entries(answers).map(([index, option]) => ({
+          questionIndex: parseInt(index),
+          selectedOption: option.toUpperCase(),
+        })),
       });
+
+      const result = response.data;
 
       setQuizResult({
-        score,
-        totalQuestions: quiz.questions.length,
-        correctAnswers: correctCount,
+        score: result.score,
+        totalQuestions: result.totalQuestions,
+        correctAnswers: result.score,
       });
       setQuizCompleted(true);
       toast.success("Quiz submitted successfully!");
@@ -566,7 +486,9 @@ export default function QuizPage({ params }: { params: { id: string } }) {
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-muted-foreground" />
             <span
-              className={`font-mono ${timeRemaining < 60 ? "text-red-500" : ""}`}
+              className={`font-mono ${
+                timeRemaining < 60 ? "text-red-500" : ""
+              }`}
             >
               {formatTime(timeRemaining)}
             </span>
@@ -656,10 +578,14 @@ export default function QuizPage({ params }: { params: { id: string } }) {
 
             {currentFeedback && (
               <div
-                className={`mt-4 p-4 rounded-lg ${currentFeedback.correct ? "bg-green-50" : "bg-red-50"}`}
+                className={`mt-4 p-4 rounded-lg ${
+                  currentFeedback.correct ? "bg-green-50" : "bg-red-50"
+                }`}
               >
                 <p
-                  className={`font-medium ${currentFeedback.correct ? "text-green-700" : "text-red-700"}`}
+                  className={`font-medium ${
+                    currentFeedback.correct ? "text-green-700" : "text-red-700"
+                  }`}
                 >
                   {currentFeedback.correct ? "Correct!" : "Incorrect!"}
                 </p>
@@ -710,17 +636,17 @@ export default function QuizPage({ params }: { params: { id: string } }) {
                 index === currentQuestionIndex
                   ? "default"
                   : feedback[index]?.correct
-                    ? "outline"
-                    : feedback[index]
-                      ? "destructive"
-                      : "outline"
+                  ? "outline"
+                  : feedback[index]
+                  ? "destructive"
+                  : "outline"
               }
               className={`w-10 h-10 p-0 ${
                 feedback[index]?.correct
                   ? "bg-green-500 hover:bg-green-600"
                   : feedback[index]
-                    ? "bg-red-500 hover:bg-red-600"
-                    : ""
+                  ? "bg-red-500 hover:bg-red-600"
+                  : ""
               }`}
               onClick={() => setCurrentQuestionIndex(index)}
             >
@@ -737,7 +663,9 @@ export default function QuizPage({ params }: { params: { id: string } }) {
                 <p className="text-sm text-muted-foreground">
                   {hasAnsweredAll
                     ? "You've answered all questions. Ready to submit?"
-                    : `You still have ${quiz.questions.length - Object.keys(answers).length} unanswered questions.`}
+                    : `You still have ${
+                        quiz.questions.length - Object.keys(answers).length
+                      } unanswered questions.`}
                 </p>
               </div>
             </CardContent>

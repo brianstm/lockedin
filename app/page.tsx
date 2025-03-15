@@ -50,7 +50,7 @@ export default function Home() {
               <div className="mx-auto lg:ml-auto flex justify-center lg:justify-end">
                 <div className="w-full max-w-[400px] aspect-video bg-muted rounded-xl overflow-hidden border shadow-lg">
                   <img
-                    src="/placeholder.svg?height=400&width=600"
+                    src="/download.svg?height=600&width=600"
                     alt="LockedIn Dashboard Preview"
                     className="w-full h-full object-cover"
                   />

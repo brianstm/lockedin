@@ -148,7 +148,11 @@ export default function DashboardPage() {
                 Average from sessions
               </p>
               <Progress
-                value={dashboardData?.averageProductivityScore || 0}
+                value={
+                  dashboardData?.averageProductivityScore
+                    ? (dashboardData?.averageProductivityScore / 10) * 100
+                    : 0
+                }
                 className="mt-3"
               />
             </CardContent>

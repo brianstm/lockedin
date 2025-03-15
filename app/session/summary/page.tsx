@@ -91,6 +91,7 @@ export default function SessionSummaryPage() {
       setIsGeneratingQuiz(false);
     }
   };
+
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
@@ -143,7 +144,7 @@ export default function SessionSummaryPage() {
                 {Math.round(
                   (sessionData.focusedTime /
                     (sessionData.focusedTime + sessionData.distractedTime)) *
-                    100,
+                    100
                 )}
                 %
               </div>
