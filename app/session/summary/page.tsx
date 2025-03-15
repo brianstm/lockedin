@@ -69,16 +69,20 @@ export default function SessionSummaryPage() {
     setIsGeneratingQuiz(true);
 
     try {
-      // Call the generate endpoint
-      const response = await api.post("/generate", {
-        prompt: `Create a quiz about ${quizTopic} with 5 multiple choice questions.`,
+      // Call the generate endpoint with the correct URL
+      const response = await api.post("/quiz/generate", {
+        // Make sure this endpoint is correct
+        userId: user?.uid,
+        topic: quizTopic.trim(),
+        sessionId:
+          sessionStorage.getItem("currentSessionId") || "default-session",
       });
 
-      // Store the quiz in localStorage for the quiz page to use
-      localStorage.setItem("current_quiz", response.data.response);
+      // Get the quiz ID from the response
+      const quizId = response.data.quizId || `temp-${Date.now()}`;
 
       toast.success("Your quiz is ready to take.");
-      router.push("/quiz/current");
+      router.push(`/quiz/${quizId}/current`); // This is correct - navigate to the /current path
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.error || "Failed to generate quiz";
@@ -87,7 +91,6 @@ export default function SessionSummaryPage() {
       setIsGeneratingQuiz(false);
     }
   };
-
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-6">
@@ -140,7 +143,7 @@ export default function SessionSummaryPage() {
                 {Math.round(
                   (sessionData.focusedTime /
                     (sessionData.focusedTime + sessionData.distractedTime)) *
-                    100
+                    100,
                 )}
                 %
               </div>
